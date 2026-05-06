@@ -1,0 +1,319 @@
+<div class="max-w-5xl mx-auto px-4 md:px-0">
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-4 md:p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold"><%= modo === 'editar' ? 'Editar' : 'Nueva' %> Proforma</h3>
+            <p class="text-sm text-gray-500 mt-1">Número: <span class="font-mono font-bold text-blue-600"><%= numero %></span></p>
+        </div>
+        
+        <form id="proformaForm" action="<%= modo === 'editar' ? '/proformas/' + proforma.id + '/editar' : '/proformas/nueva' %>" method="POST" class="p-4 md:p-6">
+            <input type="hidden" name="numero" value="<%= numero %>">
+            
+            <% if (errores.length > 0) { %>
+            <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                <ul class="list-disc list-inside text-red-700 text-sm">
+                    <% errores.forEach(error => { %>
+                        <li><%= error.msg %></li>
+                    <% }); %>
+                </ul>
+            </div>
+            <% } %>
+
+            <!-- Datos Generales -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Cliente *</label>
+                    <select name="cliente_id" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-sm md:text-base">
+                        <option value="">Seleccione un cliente</option>
+                        <% clientes.forEach(c => { %>
+                        <option value="<%= c.id %>" <%= (proforma.cliente_id == c.id) ? 'selected' : '' %>>
+                            <%= c.nombre %> <%= c.ruc ? '(RUC: ' + c.ruc + ')' : c.dni ? '(DNI: ' + c.dni + ')' : '' %>
+                        </option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Emisión</label>
+                    <input 
+                        type="date" 
+                        name="fecha_emision" 
+                        required
+                        value="<%= proforma.fecha_emision ? new Date(proforma.fecha_emision).toISOString().split('T')[0] : new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' }) %>"
+                        readonly
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed focus:outline-none text-sm md:text-base"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">Fecha automática del sistema</p>
+                </div>
+            </div>
+
+            <!-- Agregar Productos -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Agregar Producto</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <select id="selectProducto" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm md:text-base">
+                        <option value="">Seleccione un producto...</option>
+                        <% productos.forEach(p => { %>
+                        <option value="<%= p.id %>" data-nombre="<%= p.nombre %>" data-precio="<%= p.precio_base %>" data-descripcion="<%= p.descripcion %>">
+                            <%= p.nombre %> - S/ <%= Number(p.precio_base).toFixed(2) %>
+                        </option>
+                        <% }); %>
+                    </select>
+                    <input type="number" id="inputCantidad" placeholder="Cant." min="1" step="1" value="1"
+                        class="w-full sm:w-24 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm md:text-base">
+                    <button type="button" id="btnAgregar" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition flex items-center justify-center">
+                        <i class="fas fa-plus mr-2"></i><span class="sm:hidden">Agregar</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla de Detalles -->
+            <div class="bg-gray-50 rounded-lg p-3 md:p-4 mb-6 overflow-x-auto">
+                <table class="w-full min-w-[500px] md:min-w-0" id="tablaDetalles">
+                    <thead>
+                        <tr class="border-b border-gray-300">
+                            <th class="text-left py-2 text-xs font-medium text-gray-500 uppercase w-12">N°</th>
+                            <th class="text-left py-2 text-xs font-medium text-gray-500 uppercase">Descripción</th>
+                            <th class="text-right py-2 text-xs font-medium text-gray-500 uppercase w-20 md:w-24">Cant.</th>
+                            <th class="text-right py-2 text-xs font-medium text-gray-500 uppercase w-24 md:w-32">P. Unit.</th>
+                            <th class="text-right py-2 text-xs font-medium text-gray-500 uppercase w-24 md:w-32">Total</th>
+                            <th class="text-center py-2 text-xs font-medium text-gray-500 uppercase w-16"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyDetalles">
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+                <p id="mensajeVacio" class="text-center text-gray-500 py-8">No hay productos agregados</p>
+            </div>
+
+            <!-- Totales -->
+            <div class="flex justify-end mb-6">
+                <div class="w-full sm:w-72 space-y-2 bg-gray-50 p-4 rounded-lg">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Subtotal:</span>
+                        <span class="font-medium" id="subtotal">S/ 0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">IGV (18%):</span>
+                        <span class="font-medium" id="igv">S/ 0.00</span>
+                    </div>
+                    <div class="flex justify-between text-lg font-bold border-t border-gray-300 pt-2">
+                        <span>Total:</span>
+                        <span class="text-blue-600" id="total">S/ 0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+                <textarea name="observaciones" rows="2"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none text-sm md:text-base"><%= proforma.observaciones || '' %></textarea>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition flex items-center justify-center">
+                    <i class="fas fa-save mr-2"></i><%= modo === 'editar' ? 'Actualizar' : 'Guardar' %> Proforma
+                </button>
+                <a href="/proformas" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg transition text-center flex items-center justify-center">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Datos iniciales para edición -->
+<script type="application/json" id="datosIniciales">
+<%- JSON.stringify(((proforma && proforma.detalles) || []).map(d => ({
+    producto_id: d.producto_id,
+    nombre: d.producto_nombre || d.descripcion,
+    descripcion: d.descripcion,
+    cantidad: parseFloat(d.cantidad),
+    precio_unitario: parseFloat(d.precio_unitario),
+    total: parseFloat(d.total)
+}))) %>
+</script>
+
+<script>
+(function() {
+    'use strict';
+    
+    let detalles = [];
+    try {
+        const datosEl = document.getElementById('datosIniciales');
+        if (datosEl) {
+            detalles = JSON.parse(datosEl.textContent) || [];
+        }
+    } catch (e) {
+        console.error('Error parseando datos iniciales:', e);
+    }
+    
+    const selectProducto = document.getElementById('selectProducto');
+    const inputCantidad = document.getElementById('inputCantidad');
+    const btnAgregar = document.getElementById('btnAgregar');
+    const tbodyDetalles = document.getElementById('tbodyDetalles');
+    const mensajeVacio = document.getElementById('mensajeVacio');
+    const subtotalEl = document.getElementById('subtotal');
+    const igvEl = document.getElementById('igv');
+    const totalEl = document.getElementById('total');
+    const form = document.getElementById('proformaForm');
+
+    if (!selectProducto || !btnAgregar || !tbodyDetalles) {
+        console.error('No se encontraron elementos del formulario');
+        return;
+    }
+
+    function formatMoney(num) {
+        return 'S/ ' + (num || 0).toFixed(2);
+    }
+
+    function calcularTotales() {
+        const subtotal = detalles.reduce((sum, d) => sum + (d.total || 0), 0);
+        const igv = subtotal * 0.18;
+        const total = subtotal + igv;
+        if (subtotalEl) subtotalEl.textContent = formatMoney(subtotal);
+        if (igvEl) igvEl.textContent = formatMoney(igv);
+        if (totalEl) totalEl.textContent = formatMoney(total);
+    }
+
+    function renderTabla() {
+        tbodyDetalles.innerHTML = '';
+        
+        if (detalles.length === 0) {
+            if (mensajeVacio) mensajeVacio.style.display = 'block';
+            calcularTotales();
+            return;
+        }
+        
+        if (mensajeVacio) mensajeVacio.style.display = 'none';
+
+        detalles.forEach((d, index) => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-gray-200 hover:bg-gray-50';
+            tr.innerHTML = `
+                <td class="py-3 px-2 text-center">
+                    <input type="hidden" name="detalles[${index}][producto_id]" value="${d.producto_id}">
+                    <span class="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">${index + 1}</span>
+                </td>
+                <td class="py-3 px-2">
+                    <input type="text" name="detalles[${index}][descripcion]" value="${d.descripcion.replace(/"/g, '&quot;')}" 
+                        class="w-full text-sm px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none">
+                </td>
+                <td class="py-3 px-2 text-right">
+                    <input type="number" name="detalles[${index}][cantidad]" value="${d.cantidad}" min="0.01" step="0.01"
+                        class="w-20 text-right text-sm px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none cantidad-input"
+                        data-index="${index}">
+                </td>
+                <td class="py-3 px-2 text-right">
+                    <input type="number" name="detalles[${index}][precio_unitario]" value="${d.precio_unitario}" min="0" step="0.01"
+                        class="w-24 text-right text-sm px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none precio-input"
+                        data-index="${index}">
+                </td>
+                <td class="py-3 px-2 text-right">
+                    <span class="text-sm font-semibold text-gray-800">S/ ${d.total.toFixed(2)}</span>
+                </td>
+                <td class="py-3 px-2 text-center">
+                    <button type="button" class="text-red-500 hover:text-red-700 p-1 transition eliminar-btn" data-index="${index}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+            tbodyDetalles.appendChild(tr);
+        });
+
+        document.querySelectorAll('.cantidad-input').forEach(input => {
+            input.addEventListener('change', actualizarLinea);
+        });
+        document.querySelectorAll('.precio-input').forEach(input => {
+            input.addEventListener('change', actualizarLinea);
+        });
+        document.querySelectorAll('.eliminar-btn').forEach(btn => {
+            btn.addEventListener('click', eliminarLinea);
+        });
+
+        calcularTotales();
+    }
+
+    function actualizarLinea(e) {
+        const index = parseInt(e.target.dataset.index);
+        const cantidad = parseFloat(document.querySelector(`.cantidad-input[data-index="${index}"]`).value) || 0;
+        const precio = parseFloat(document.querySelector(`.precio-input[data-index="${index}"]`).value) || 0;
+        
+        detalles[index].cantidad = cantidad;
+        detalles[index].precio_unitario = precio;
+        detalles[index].total = cantidad * precio;
+        
+        renderTabla();
+    }
+
+    function eliminarLinea(e) {
+        const index = parseInt(e.currentTarget.dataset.index);
+        detalles.splice(index, 1);
+        renderTabla();
+    }
+
+    function agregarProducto() {
+        const option = selectProducto.selectedOptions[0];
+        if (!option || !option.value) {
+            alert('Seleccione un producto');
+            return;
+        }
+
+        const productoId = parseInt(option.value);
+        const nombre = option.dataset.nombre || option.text;
+        const precioBase = parseFloat(option.dataset.precio) || 0;
+        const descripcion = option.dataset.descripcion || nombre;
+        const cantidad = parseFloat(inputCantidad?.value) || 1;
+
+        if (cantidad <= 0) {
+            alert('La cantidad debe ser mayor a 0');
+            return;
+        }
+
+        const existenteIndex = detalles.findIndex(d => d.producto_id === productoId);
+        if (existenteIndex >= 0) {
+            detalles[existenteIndex].cantidad += cantidad;
+            detalles[existenteIndex].total = detalles[existenteIndex].cantidad * detalles[existenteIndex].precio_unitario;
+        } else {
+            detalles.push({
+                producto_id: productoId,
+                nombre: nombre,
+                descripcion: descripcion,
+                cantidad: cantidad,
+                precio_unitario: precioBase,
+                total: cantidad * precioBase
+            });
+        }
+
+        selectProducto.value = '';
+        if (inputCantidad) inputCantidad.value = '1';
+        
+        renderTabla();
+    }
+
+    btnAgregar.addEventListener('click', agregarProducto);
+
+    if (inputCantidad) {
+        inputCantidad.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                agregarProducto();
+            }
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (detalles.length === 0) {
+                e.preventDefault();
+                alert('Debe agregar al menos un producto a la proforma.');
+                return false;
+            }
+        });
+    }
+
+    renderTabla();
+})();
+</script>

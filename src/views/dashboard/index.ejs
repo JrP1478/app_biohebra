@@ -1,0 +1,97 @@
+<div class="stats-grid mb-8">
+    <!-- Total Proformas -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Total Proformas</p>
+                <p class="text-3xl font-bold text-blue-600"><%= totalProformas %></p>
+            </div>
+            <div class="bg-blue-100 p-3 rounded-full">
+                <i class="fas fa-file-alt text-blue-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Clientes -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Clientes Registrados</p>
+                <p class="text-3xl font-bold text-green-600"><%= totalClientes %></p>
+            </div>
+            <div class="bg-green-100 p-3 rounded-full">
+                <i class="fas fa-users text-green-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Productos -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Productos en Catálogo</p>
+                <p class="text-3xl font-bold text-purple-600"><%= totalProductos %></p>
+            </div>
+            <div class="bg-purple-100 p-3 rounded-full">
+                <i class="fas fa-box text-purple-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monto Total -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">Monto Total Proformado</p>
+                <p class="text-3xl font-bold text-orange-600">S/ <%= Number(totalGeneral).toFixed(2) %></p>
+            </div>
+            <div class="bg-orange-100 p-3 rounded-full">
+                <i class="fas fa-coins text-orange-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Acciones Rápidas -->
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h3 class="text-lg font-semibold mb-4">Acciones Rápidas</h3>
+    <div class="action-bar">
+        <a href="/proformas/nueva" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition flex items-center justify-center">
+            <i class="fas fa-plus mr-2"></i>Nueva Proforma
+        </a>
+        <a href="/clientes/nuevo" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition flex items-center justify-center">
+            <i class="fas fa-user-plus mr-2"></i>Nuevo Cliente
+        </a>
+        <a href="/productos/nuevo" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition flex items-center justify-center">
+            <i class="fas fa-plus-circle mr-2"></i>Nuevo Producto
+        </a>
+    </div>
+</div>
+
+<!-- Estados de Proformas -->
+<% if (stats.length > 0) { %>
+<div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-semibold mb-4">Proformas por Estado</h3>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <% const colores = {
+            'EMITIDA': 'blue',
+            'ENVIADA': 'yellow',
+            'ACEPTADA': 'green',
+            'RECHAZADA': 'red',
+            'ANULADA': 'gray'
+        }; %>
+        <% stats.forEach(stat => { %>
+            <div class="border rounded-lg p-4 text-center">
+                <p class="text-2xl font-bold text-<%= colores[stat.estado] || 'gray' %>-600"><%= stat.cantidad %></p>
+                <p class="text-sm text-gray-500"><%= stat.estado %></p>
+            </div>
+        <% }); %>
+    </div>
+</div>
+<% } else { %>
+<div class="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+    <i class="fas fa-inbox text-4xl mb-3"></i>
+    <p>No hay proformas registradas aún.</p>
+    <a href="/proformas/nueva" class="text-blue-600 hover:underline mt-2 inline-block">Crear la primera proforma</a>
+</div>
+<% } %>

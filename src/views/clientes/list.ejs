@@ -1,0 +1,220 @@
+<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="flex flex-1 gap-3 flex-wrap">
+        <div class="flex-1 relative min-w-[200px]">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="buscadorClientes" 
+                placeholder="Buscar por nombre, RUC, email o teléfono..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <select id="filtroActivo" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white min-w-[120px]">
+            <option value="todos">Todos</option>
+            <option value="activo">Activos</option>
+            <option value="inactivo">Inactivos</option>
+        </select>
+    </div>
+    <a href="/clientes/nuevo" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition whitespace-nowrap text-center">
+        <i class="fas fa-plus mr-2"></i>Nuevo Cliente
+    </a>
+</div>
+
+<!-- VISTA MÓVIL: Cards -->
+<div class="md:hidden space-y-4 mb-6">
+    <% if (clientes.length > 0) { %>
+        <% clientes.forEach(cliente => { %>
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 <%= 
+            cliente.activo ? 'border-green-500' : 'border-red-500'
+        %>">
+            <div class="flex justify-between items-start mb-2">
+                <div class="flex items-center">
+                    <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-3">
+                        <%= cliente.nombre.charAt(0).toUpperCase() %>
+                    </div>
+                    <div>
+                        <p class="font-bold text-gray-900 text-sm"><%= cliente.nombre %></p>
+                        <p class="text-xs text-gray-500"><%= cliente.email || 'Sin email' %></p>
+                    </div>
+                </div>
+                <span class="text-xs px-2 py-1 rounded-full font-medium <%= 
+                    cliente.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                %>">
+                    <%= cliente.activo ? 'Activo' : 'Inactivo' %>
+                </span>
+            </div>
+            
+            <div class="text-sm text-gray-600 mb-1">
+                <% if (cliente.tipo_documento === 'DNI') { %>
+                    <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium mr-1">DNI</span>
+                    <%= cliente.dni || '-' %>
+                <% } else { %>
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium mr-1">RUC</span>
+                    <%= cliente.ruc || '-' %>
+                <% } %>
+            </div>
+            
+            <div class="text-xs text-gray-500 mb-3">
+                <div><%= cliente.contacto || '-' %></div>
+                <div><%= cliente.telefono || '-' %></div>
+            </div>
+            
+            <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <a href="/clientes/<%= cliente.id %>" class="text-blue-600 hover:text-blue-800 p-2" title="Ver">
+                    <i class="fas fa-eye"></i>
+                </a>
+                <a href="/clientes/<%= cliente.id %>/editar" class="text-yellow-600 hover:text-yellow-800 p-2" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <form action="/clientes/<%= cliente.id %>/toggle" method="POST" class="inline">
+                    <button type="submit" class="text-gray-600 hover:text-gray-800 p-2" title="<%= cliente.activo ? 'Desactivar' : 'Activar' %>">
+                        <i class="fas <%= cliente.activo ? 'fa-toggle-on' : 'fa-toggle-off' %>"></i>
+                    </button>
+                </form>
+                <form action="/clientes/<%= cliente.id %>/eliminar" method="POST" class="inline" onsubmit="return confirm('¿Eliminar este cliente permanentemente?')">
+                    <button type="submit" class="text-red-600 hover:text-red-800 p-2" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        <% }); %>
+    <% } else { %>
+        <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+            <i class="fas fa-users text-4xl mb-3 text-gray-300"></i>
+            <p>No se encontraron clientes</p>
+        </div>
+    <% } %>
+</div>
+
+<!-- VISTA DESKTOP: Tabla -->
+<div class="hidden md:block table-container bg-white rounded-lg shadow overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documento</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tablaClientes">
+            <% clientes.forEach(cliente => { %>
+            <tr class="fila-cliente hover:bg-gray-50 transition" 
+                data-nombre="<%= cliente.nombre.toLowerCase() %>" 
+                data-ruc="<%= (cliente.ruc || '').toLowerCase() %>" 
+                data-email="<%= (cliente.email || '').toLowerCase() %>"
+                data-telefono="<%= (cliente.telefono || '').toLowerCase() %>"
+                data-activo="<%= cliente.activo ? 'activo' : 'inactivo' %>">
+                <td class="px-6 py-4">
+                    <div class="flex items-center">
+                        <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-3">
+                            <%= cliente.nombre.charAt(0).toUpperCase() %>
+                        </div>
+                        <div>
+                            <div class="nombre-cliente font-medium text-gray-900"><%= cliente.nombre %></div>
+                            <div class="text-sm text-gray-500"><%= cliente.email || 'Sin email' %></div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">
+                    <% if (cliente.tipo_documento === 'DNI') { %>
+                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium mr-1">DNI</span>
+                        <%= cliente.dni || '-' %>
+                    <% } else { %>
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium mr-1">RUC</span>
+                        <%= cliente.ruc || '-' %>
+                    <% } %>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">
+                    <div><%= cliente.contacto || '-' %></div>
+                    <div class="telefono-cliente text-gray-400"><%= cliente.telefono || '-' %></div>
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <% if (cliente.activo) { %>
+                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">Activo</span>
+                    <% } else { %>
+                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">Inactivo</span>
+                    <% } %>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-2">
+                        <a href="/clientes/<%= cliente.id %>" class="text-blue-600 hover:text-blue-800 p-2" title="Ver">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="/clientes/<%= cliente.id %>/editar" class="text-yellow-600 hover:text-yellow-800 p-2" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form action="/clientes/<%= cliente.id %>/toggle" method="POST" class="inline">
+                            <button type="submit" class="text-gray-600 hover:text-gray-800 p-2" title="<%= cliente.activo ? 'Desactivar' : 'Activar' %>">
+                                <i class="fas <%= cliente.activo ? 'fa-toggle-on' : 'fa-toggle-off' %>"></i>
+                            </button>
+                        </form>
+                        <form action="/clientes/<%= cliente.id %>/eliminar" method="POST" class="inline" onsubmit="return confirm('¿Eliminar este cliente permanentemente?')">
+                            <button type="submit" class="text-red-600 hover:text-red-800 p-2" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            <% }); %>
+        </tbody>
+        <tbody id="sinResultados" style="display: none;">
+            <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-search text-4xl mb-3 text-gray-300"></i>
+                    <p>No se encontraron clientes con ese criterio</p>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const buscador = document.getElementById('buscadorClientes');
+    const filtroActivo = document.getElementById('filtroActivo');
+    const filas = document.querySelectorAll('.fila-cliente');
+    const sinResultados = document.getElementById('sinResultados');
+    const tablaClientes = document.getElementById('tablaClientes');
+
+    function filtrar() {
+        const texto = buscador.value.toLowerCase().trim();
+        const estado = filtroActivo.value;
+        let visibles = 0;
+
+        filas.forEach(fila => {
+            const nombre = fila.dataset.nombre;
+            const ruc = fila.dataset.ruc;
+            const email = fila.dataset.email;
+            const telefono = fila.dataset.telefono;
+            const activo = fila.dataset.activo;
+
+            const coincideTexto = !texto || 
+                nombre.includes(texto) || 
+                ruc.includes(texto) || 
+                email.includes(texto) ||
+                telefono.includes(texto);
+                
+            const coincideEstado = estado === 'todos' || activo === estado;
+
+            if (coincideTexto && coincideEstado) {
+                fila.style.display = '';
+                visibles++;
+            } else {
+                fila.style.display = 'none';
+            }
+        });
+
+        if (visibles === 0) {
+            tablaClientes.style.display = 'none';
+            sinResultados.style.display = '';
+        } else {
+            tablaClientes.style.display = '';
+            sinResultados.style.display = 'none';
+        }
+    }
+
+    buscador.addEventListener('input', filtrar);
+    filtroActivo.addEventListener('change', filtrar);
+
+    buscador.focus();
+</script>
